@@ -313,23 +313,26 @@ function classify(command, config) {
 }
 
 function classifySegment(segment, config) {
+  // Strip quoted string literals before head-matching, so prose like
+  // Write-Output "taskkill test:" never counts as a kill command.
+  const code = segment.replace(/"(?:[^"\\]|\\.)*"/g, ' "" ').replace(/'(?:[^'\\]|\\.)*'/g, " '' ");
   const destructive =
-    DELETE_HEADS.test(segment) ||
-    KILL_HEADS.test(segment) ||
-    REGISTRY_HEADS.test(segment) ||
-    SERVICE_DELETE_HEADS.test(segment) ||
-    ENV_HEADS.test(segment) ||
-    SYSTEM_HEADS.test(segment) ||
-    ACCOUNT_HEADS.test(segment);
+    DELETE_HEADS.test(code) ||
+    KILL_HEADS.test(code) ||
+    REGISTRY_HEADS.test(code) ||
+    SERVICE_DELETE_HEADS.test(code) ||
+    ENV_HEADS.test(code) ||
+    SYSTEM_HEADS.test(code) ||
+    ACCOUNT_HEADS.test(code);
 
   if (!destructive) return { ...ALLOW, why: "creative or neutral command" };
 
   const paths = extractPaths(segment);
 
   // --- category: deletion / formatting -----------------------------------
-  if (DELETE_HEADS.test(segment)) {
+  if (DELETE_HEADS.test(code)) {
     // raw disk formatting / partitioning is always denied, anywhere
-    if (/(^|\s)(format|format-volume|diskpart|clear-disk|initialize-disk|remove-partition)(\s|$)/i.test(segment) && !/--\S*format/i.test(segment)) {
+    if (/(^|\s)(format|format-volume|diskpart|clear-disk|initialize-disk|remove-partition)(\s|$)/i.test(code) && !/--\S*format/i.test(segment)) {
       return deny(
         "BLOCKED: disk formatting or partitioning is permanently denied. " +
         "Reason: format / diskpart destroys whole volumes and cannot be scoped to a project."
@@ -374,7 +377,7 @@ function classifySegment(segment, config) {
   }
 
   // --- category: process killing -----------------------------------------
-  if (KILL_HEADS.test(segment)) {
+  if (KILL_HEADS.test(code)) {
     const targets = extractKillTargets(segment);
     for (const target of targets) {
       if (isDeniedProcess(target, config.deny_processes_kill)) {
@@ -384,7 +387,7 @@ function classifySegment(segment, config) {
         );
       }
     }
-    if (targets.length === 0 && /\b(taskkill|pkill)\b/i.test(segment)) {
+    if (targets.length === 0 && /\b(taskkill|pkill)\b/i.test(code)) {
       // taskkill without /IM or /PID: ambiguous
       if (config.require_confirmation.includes("taskkill_unknown")) {
         return ask("CONFIRM: process kill command with no explicit target.");
@@ -401,7 +404,7 @@ function classifySegment(segment, config) {
   }
 
   // --- category: registry mutation ---------------------------------------
-  if (REGISTRY_HEADS.test(segment)) {
+  if (REGISTRY_HEADS.test(code)) {
     return deny(
       "BLOCKED: registry modification is permanently denied. " +
       "Reason: reg add / reg delete can break the system."
@@ -409,7 +412,7 @@ function classifySegment(segment, config) {
   }
 
   // --- category: service deletion ----------------------------------------
-  if (SERVICE_DELETE_HEADS.test(segment)) {
+  if (SERVICE_DELETE_HEADS.test(code)) {
     return deny(
       "BLOCKED: service deletion is permanently denied. " +
       "Reason: sc delete removes system services."
@@ -417,7 +420,7 @@ function classifySegment(segment, config) {
   }
 
   // --- category: environment variables -----------------------------------
-  if (ENV_HEADS.test(segment)) {
+  if (ENV_HEADS.test(code)) {
     if (config.require_confirmation.includes("setx")) {
       return ask(
         "CONFIRM: environment variable modification. " +
@@ -428,13 +431,13 @@ function classifySegment(segment, config) {
   }
 
   // --- category: Defender / firewall / accounts ---------------------------
-  if (SYSTEM_HEADS.test(segment)) {
+  if (SYSTEM_HEADS.test(code)) {
     return deny(
       "BLOCKED: disabling Windows Defender, the firewall, or deleting accounts is permanently denied."
     );
   }
 
-  if (ACCOUNT_HEADS.test(segment)) {
+  if (ACCOUNT_HEADS.test(code)) {
     return deny(
       "BLOCKED: account deletion or password reset is permanently denied."
     );
