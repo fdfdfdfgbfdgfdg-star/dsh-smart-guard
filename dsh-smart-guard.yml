@@ -1,0 +1,48 @@
+# dsh-smart-guard configuration.
+# Projects: paths where the agent may delete, move and kill freely.
+projects:
+  - C:\Users\79881\Desktop\MyClaudeProjects\
+  - C:\Users\79881\Desktop\MyGame\
+  - C:\Users\79881\Desktop\dsh-auto-retry\
+  - C:\Users\79881\Desktop\dsh-smart-guard\
+
+# Zones where destructive operations are blocked forever.
+deny_delete:
+  - C:\Windows\
+  - C:\Program Files\
+  - C:\Program Files (x86)\
+  - C:\ProgramData\
+  - C:\Users\79881\AppData\
+  - C:\Users\79881\Documents\
+  - C:\Users\79881\Downloads\
+
+# Path substrings that mark protected content anywhere on disk.
+deny_delete_patterns:
+  - MetaTrader
+  - MT4
+  - MT5
+  - terminal.exe
+  - terminal64.exe
+  - Chrome\User Data
+  - Mozilla\Firefox
+  - Edge\User Data
+  - Opera
+  - Brave
+  - Yandex
+
+# Processes that must never be killed.
+deny_processes_kill:
+  - terminal.exe
+  - terminal64.exe
+  - chrome.exe
+  - firefox.exe
+  - explorer.exe
+  - winlogon.exe
+  - services.exe
+  - lsass.exe
+
+# Operations that require user confirmation in chat.
+require_confirmation:
+  - delete_outside_projects
+  - taskkill_unknown
+  - setx

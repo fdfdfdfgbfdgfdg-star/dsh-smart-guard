@@ -1,0 +1,7 @@
+# dsh-smart-guard bundle patch: mounts the plugin into the profile layer stack.
+# The row id is 'dsh-smart-guard'; runtime configuration (projects, deny lists)
+# is read from dsh-smart-guard.yml next to the plugin entry, or overridden
+# per-profile through a cordis.patch row with the same id.
+- insert:
+    - id: dsh-smart-guard
+      name: 'dsh-smart-guard'
